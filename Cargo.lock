@@ -526,6 +526,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "log",
+ "rand",
  "regex",
  "serde",
  "serde_json",

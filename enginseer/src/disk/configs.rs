@@ -43,6 +43,36 @@ pub struct Qcow2DiskConfig {
     pub created_at: DateTime<Utc>,
 }
 
+impl Qcow2DiskConfig {
+    pub fn validate(&self) -> Result<(), DiskError> {
+        if self.name.trim().is_empty() {
+            return Err(DiskError::InvalidConfig("name can not be empty".into()));
+        }
+
+        let name_re = regex::Regex::new(r"^[A-Za-z0-9._-]+$").unwrap();
+        if !name_re.is_match(&self.name) {
+            return Err(DiskError::InvalidConfig(format!(
+                "invalid name '{}', allowed characters: letters, numbers, '.', '_', '-'",
+                self.name
+            )));
+        }
+
+        if self.size_gb <= 0 {
+            return Err(DiskError::InvalidConfig(
+                "disk size must be greater than 0 GB".into(),
+            ));
+        }
+
+        if self.created_at > chrono::Utc::now() {
+            return Err(DiskError::InvalidConfig(
+                "created at cannot be in the future".into(),
+            ));
+        }
+
+        Ok(())
+    }
+}
+
 impl TryFrom<RawQcow2DiskConfig> for Qcow2DiskConfig {
     type Error = DiskError;
 

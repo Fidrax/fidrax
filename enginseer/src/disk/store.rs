@@ -26,16 +26,7 @@ impl Qcow2DiskStore {
 
 impl Config<Qcow2DiskConfig, DiskError> for Qcow2DiskStore {
     async fn read(&self, name: &str) -> Result<Qcow2DiskConfig, DiskError> {
-        let file = &self.get_config_path(name);
-        if !file.exists() {
-            return Err(DiskError::NotFound(file.to_path_buf()));
-        }
-
-        let disk_name = file
-            .file_name()
-            .ok_or_else(|| DiskError::InvalidPath(file.to_path_buf()))?;
-
-        let config_path = self.base_dir.join(disk_name).with_extension("yaml");
+        let config_path = self.base_dir.join(name).with_extension("yaml");
 
         let content = fs::read_to_string(&config_path)
             .await
@@ -49,8 +40,21 @@ impl Config<Qcow2DiskConfig, DiskError> for Qcow2DiskStore {
         })?)
     }
 
+    async fn read_by_path(&self, config_path: &PathBuf) -> Result<Qcow2DiskConfig, DiskError> {
+        let content = fs::read_to_string(&config_path)
+            .await
+            .map_err(|err| DiskError::IOError(config_path.clone(), err))?;
+
+        let raw_config: RawQcow2DiskConfig = serde_yaml::from_str(&content)
+            .map_err(|err| DiskError::SerializationFailed(config_path.to_path_buf(), err.to_string()))?;
+
+        Ok(Qcow2DiskConfig::try_from(raw_config).map_err(|e| {
+            DiskError::InvalidConfig(format!("failed to convert raw config: {:?}", e.to_string()))
+        })?)
+    }
+
     async fn create(&self, config: &Qcow2DiskConfig) -> Result<(), DiskError> {
-        self.validate(config)?;
+        config.validate()?;
 
         let config_path = self.base_dir.join(&config.name).with_extension("yaml");
         if config_path.exists() {
@@ -70,7 +74,7 @@ impl Config<Qcow2DiskConfig, DiskError> for Qcow2DiskStore {
     }
 
     async fn update(&self, config: &Qcow2DiskConfig) -> Result<(), DiskError> {
-        self.validate(config)?;
+        config.validate()?;
 
         let config_path = self.base_dir.join(&config.name).with_extension("yaml");
         if !config_path.exists() {
@@ -135,31 +139,4 @@ impl Config<Qcow2DiskConfig, DiskError> for Qcow2DiskStore {
         Ok(configs)
     }
 
-    fn validate(&self, config: &Qcow2DiskConfig) -> Result<(), DiskError> {
-        if config.name.trim().is_empty() {
-            return Err(DiskError::InvalidConfig("name can not be empty".into()));
-        }
-
-        let name_re = regex::Regex::new(r"^[A-Za-z0-9._-]+$").unwrap();
-        if !name_re.is_match(&config.name) {
-            return Err(DiskError::InvalidConfig(format!(
-                "invalid name '{}', allowed characters: letters, numbers, '.', '_', '-'",
-                config.name
-            )));
-        }
-
-        if config.size_gb <= 0 {
-            return Err(DiskError::InvalidConfig(
-                "disk size must be greater than 0 GB".into(),
-            ));
-        }
-
-        if config.created_at > chrono::Utc::now() {
-            return Err(DiskError::InvalidConfig(
-                "created at cannot be in the future".into(),
-            ));
-        }
-
-        Ok(())
-    }
 }

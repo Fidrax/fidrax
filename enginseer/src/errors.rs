@@ -1,4 +1,4 @@
-use crate::disk;
+use crate::{disk, vm::errors::VMError};
 
 use disk::errors::DiskError;
 use thiserror::Error;
@@ -7,6 +7,7 @@ use thiserror::Error;
 pub enum EnginseerErrors {
     #[error("disk error: {0}")]
     Disk(#[from] DiskError),
-    // #[error("vm error: {0}")]
-    // VM(#[from] VMError),
+    
+    #[error("vm error: {0}")]
+    VM(#[from] VMError),
 }
