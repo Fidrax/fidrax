@@ -23,4 +23,16 @@ pub enum DTOSErrors {
 
     #[error("disk create request disk alloc mode invalid {0}")]
     DiskInvalidAllocMode(String),
+
+    #[error("vm create request name is empty {0}")]
+    VMCreateRequestNameEmpty(String),
+
+    #[error("vm create request name contain invalid char {0}")]
+    VMCreateRequestInvalidName(String),
+
+    #[error("vm memory request invalid size {0}")]
+    VMMemSizeInvalid(String),
+
+    #[error("vm vcpu request invalid size {0}")]
+    VMCpuSizeInvalid(String),
 }

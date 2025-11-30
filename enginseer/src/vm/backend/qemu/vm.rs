@@ -22,11 +22,16 @@ use crate::{
     },
 };
 
+#[derive(Debug, Clone)]
 pub struct QemuVM {
     disk_store: Qcow2DiskStore,
 }
 
 impl QemuVM {
+    pub fn new(disk_store: Qcow2DiskStore) -> Self {
+        Self { disk_store }
+    }
+
     async fn disk_config(&self, config_path: &PathBuf) -> Result<Qcow2DiskConfig, DiskError> {
         Ok(self.disk_store.read_by_path(config_path).await?)
     }

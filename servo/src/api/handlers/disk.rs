@@ -46,16 +46,15 @@ pub async fn remove_disk(name: web::Path<String>, svc: web::Data<DiskService>) -
 }
 
 #[utoipa::path(
-    delete,
+    put,
     path = "/api/v1/disks/{name}/{size}",
     params(
         ("name" = String, Path, description = "name of the disk"),
         ("size" = u64, Path, description = "size of the disk")
     ),
     responses(
-        (status = 200, description = "Disk removed successfully"),
-        (status = 404, description = "Disk not found"),
-        (status = 400, description = "Failed to remove disk")
+        (status = 200, description = "Disk updated successfully"),
+        (status = 400, description = "Failed to update disk")
     ),
     tag = "Disks"
 )]

@@ -23,8 +23,8 @@ pub struct Application {
     pub version: String,
     pub server_host: String,
     pub server_port: u16,
-    pub store_path: PathBuf,
-    pub runtime_dir: PathBuf,
+    pub disk_config_path: PathBuf,
+    pub vm_config_path: PathBuf,
 }
 
 impl Application {
