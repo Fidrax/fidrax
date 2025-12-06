@@ -44,5 +44,9 @@ impl QemuManager{
 
         self.vm.status(&config).await
     }
+
+    pub async fn list(&self) -> Result<Vec<QemuConfig>, VMError> {
+        self.store.list().await
+    }
 }
 

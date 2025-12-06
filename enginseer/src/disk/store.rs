@@ -61,6 +61,10 @@ impl Config<Qcow2DiskConfig, DiskError> for Qcow2DiskStore {
             return Err(DiskError::DiskConfigAlreadyExist(config_path));
         }
 
+        fs::create_dir_all(&self.base_dir)
+        .await
+        .map_err(|err| DiskError::IOError(self.base_dir.clone(), err))?;
+
         let raw_config: RawQcow2DiskConfig = RawQcow2DiskConfig::from(config.clone());
         let content = serde_yaml::to_string(&raw_config).map_err(|err| {
             DiskError::InvalidConfig(format!("{}: {:?}", config.name.clone(), err.to_string()))

@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, Responder, web};
 
-use crate::{api::dtos::create_vm_req::CreateVMRequest, service::vm::QemuVMService};
+use crate::{api::dtos::{create_vm_req::CreateVMRequest, disk_config::ResponseQcow2DiskConfig}, service::{disk::DiskService, vm::QemuVMService}};
 
 #[utoipa::path(
     post,
@@ -103,6 +103,28 @@ pub async fn status_vm(name: web::Path<String>, svc: web::Data<QemuVMService>) -
             };
 
             HttpResponse::Ok().json(state)
+        }
+        Err(err) => HttpResponse::BadRequest().json(err.to_string()),
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/vm",
+    responses(
+        (status = 200, description = "vm list successfully", body=[Vec<ResponseQcow2DiskConfig>]),
+        (status = 400, description = "Failed to remove disk")
+    ),
+    tag = "Disks"
+)]
+pub async fn list_disks(svc: web::Data<DiskService>) -> impl Responder {
+    match svc.list_disks().await {
+        Ok(qcow_configs) => {
+            let disks: Vec<ResponseQcow2DiskConfig> = qcow_configs
+                .into_iter()
+                .map(ResponseQcow2DiskConfig::from)
+                .collect();
+            HttpResponse::Ok().json(disks)
         }
         Err(err) => HttpResponse::BadRequest().json(err.to_string()),
     }

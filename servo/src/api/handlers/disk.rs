@@ -73,8 +73,8 @@ pub async fn update_disk(
     get,
     path = "/api/v1/disks",
     responses(
-        (status = 200, description = "Disk removed successfully", body=[Vec<ResponseQcow2DiskConfig>]),
-        (status = 400, description = "Failed to remove disk")
+        (status = 200, description = "vm list successfully", body=[Vec<ResponseQcow2DiskConfig>]),
+        (status = 400, description = "Failed to list disks")
     ),
     tag = "Disks"
 )]

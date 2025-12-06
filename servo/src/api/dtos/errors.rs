@@ -3,8 +3,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum DTOSErrors {
-    #[error("enginseer disk error ")]
-    Disk(DiskError),
+    #[error("enginseer disk error: {0}")]
+    Disk(#[from] DiskError),
 
     #[error("disk create request name is empty {0}")]
     DiskCreateRequestNameEmpty(String),

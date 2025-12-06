@@ -54,4 +54,11 @@ impl QemuVMService {
             .await
             .map_err(|err| ServoErrors::EnginseerErrors(err.into()))
     }
+
+    pub async fn list(&self) -> Result<Vec<QemuConfig>, ServoErrors> {
+        self.manager
+            .list()
+            .await
+            .map_err(|err| ServoErrors::EnginseerErrors(err.into()))
+    }
 }

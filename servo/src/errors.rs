@@ -5,9 +5,9 @@ use crate::api::dtos::errors::DTOSErrors;
 
 #[derive(Error, Debug)]
 pub enum ServoErrors {
-    #[error("enginseer error ")]
-    EnginseerErrors(EnginseerErrors),
+    #[error("enginseer error {0}")]
+    EnginseerErrors(#[from] EnginseerErrors),
 
-    #[error("dtos error")]
-    DTOS(DTOSErrors),
+    #[error("dtos error {0}")]
+    DTOS(#[from] DTOSErrors),
 }

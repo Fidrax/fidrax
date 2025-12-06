@@ -8,6 +8,6 @@ pub fn disk_routes(cfg: &mut web::ServiceConfig) {
         .route("/{name}", web::delete().to(remove_disk))
         .route("/{name}/{size}", web::put().to(update_disk))
         .route("", web::post().to(create_disk))
-        .route("/", web::get().to(list_disks))
+        .route("", web::get().to(list_disks))
     );
 }
