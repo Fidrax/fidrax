@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, Responder, web};
 
-use crate::{api::dtos::{create_vm_req::CreateVMRequest, disk_config::ResponseQcow2DiskConfig}, service::{disk::DiskService, vm::QemuVMService}};
+use crate::{api::dtos::{create_vm_req::CreateVMRequest, vm_config::ResponseQemuConfig}, service::{disk::DiskService, vm::QemuVMService}};
 
 #[utoipa::path(
     post,
@@ -80,7 +80,7 @@ pub async fn restart_vm(name: web::Path<String>, svc: web::Data<QemuVMService>) 
 }
 
 #[utoipa::path(
-    post,
+    get,
     path = "/api/v1/vm/status/{name}",
     params(
         ("name" = String, Path, description = "name of the vm")
@@ -112,19 +112,19 @@ pub async fn status_vm(name: web::Path<String>, svc: web::Data<QemuVMService>) -
     get,
     path = "/api/v1/vm",
     responses(
-        (status = 200, description = "vm list successfully", body=[Vec<ResponseQcow2DiskConfig>]),
-        (status = 400, description = "Failed to remove disk")
+        (status = 200, description = "vm list successfully", body=[Vec<ResponseQemuConfig>]),
+        (status = 400, description = "failed to get vm list")
     ),
-    tag = "Disks"
+    tag = "VMs"
 )]
-pub async fn list_disks(svc: web::Data<DiskService>) -> impl Responder {
-    match svc.list_disks().await {
-        Ok(qcow_configs) => {
-            let disks: Vec<ResponseQcow2DiskConfig> = qcow_configs
+pub async fn list_vms(svc: web::Data<QemuVMService>) -> impl Responder {
+    match svc.list().await {
+        Ok(qemu_configs) => {
+            let vms: Vec<ResponseQemuConfig> = qemu_configs
                 .into_iter()
-                .map(ResponseQcow2DiskConfig::from)
+                .map(ResponseQemuConfig::from)
                 .collect();
-            HttpResponse::Ok().json(disks)
+            HttpResponse::Ok().json(vms)
         }
         Err(err) => HttpResponse::BadRequest().json(err.to_string()),
     }
