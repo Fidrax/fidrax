@@ -3,6 +3,7 @@ use tokio::{fs, process::Command};
 
 use crate::disk::{configs::Qcow2DiskAllocationMode, errors::DiskError};
 
+#[derive(Debug)]
 pub struct Qcow2Disk {
     pub path: PathBuf,
 }

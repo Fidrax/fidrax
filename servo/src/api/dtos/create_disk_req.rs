@@ -3,7 +3,7 @@ use enginseer::disk::configs::{Qcow2DiskAllocationMode, Qcow2DiskConfig};
 use regex::Regex;
 use serde::Deserialize;
 use utoipa::ToSchema;
-
+use std::path::PathBuf;
 use crate::errors::ServoErrors;
 
 use crate::api::dtos::errors::DTOSErrors;
@@ -63,9 +63,10 @@ impl TryFrom<CreateDiskRequest> for Qcow2DiskConfig {
         let alloc_mode = Qcow2DiskAllocationMode::try_from(req.alloc_mode)
             .map_err(|e| ServoErrors::DTOS(DTOSErrors::Disk(e)))?;
 
+        let disk_path = PathBuf::from(req.disk_path).join(&req.name).with_extension("qcow");
         Ok(Qcow2DiskConfig {
             name: req.name,
-            disk_path: req.disk_path.into(),
+            disk_path: disk_path,
             size_gb: req.size_gb,
             allocation_mode: alloc_mode,
             created_at: Utc::now(),

@@ -16,7 +16,7 @@ impl Qcow2DiskManager {
     pub async fn create_disk(&self, config: &Qcow2DiskConfig) -> Result<(), DiskError> {
         self.store.create(config).await?;
 
-        let disk = Qcow2Disk::new(config.disk_path.clone());
+        let disk = Qcow2Disk::new(&config.disk_path);
         disk.create_disk(&config.allocation_mode, &config.size_gb)
             .await?;
 

@@ -98,8 +98,9 @@ impl Config<Qcow2DiskConfig, DiskError> for Qcow2DiskStore {
     }
 
     async fn delete(&self, name: &str) -> Result<(), DiskError> {
-        let file = &self.get_config_path(name);
+        let file = &self.get_config_path(name).with_extension("yaml");
 
+        log::debug!("file to remove {:#?}", file);
         if !file.exists() {
             return Err(DiskError::DiskConfigDoesNotExist(file.to_path_buf()));
         }
