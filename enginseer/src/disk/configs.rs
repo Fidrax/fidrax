@@ -28,7 +28,7 @@ impl TryFrom<String> for Qcow2DiskAllocationMode {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RawQcow2DiskConfig {
     pub name: String,
-    pub disk_path: String,
+    pub path: String,
     pub size_gb: u64,
     pub allocation_mode: String,
     pub created_at: String,
@@ -37,7 +37,7 @@ pub struct RawQcow2DiskConfig {
 #[derive(Debug, Clone)]
 pub struct Qcow2DiskConfig {
     pub name: String,
-    pub disk_path: PathBuf,
+    pub path: PathBuf,
     pub size_gb: u64,
     pub allocation_mode: Qcow2DiskAllocationMode,
     pub created_at: DateTime<Utc>,
@@ -91,7 +91,7 @@ impl TryFrom<RawQcow2DiskConfig> for Qcow2DiskConfig {
 
         Ok(Qcow2DiskConfig {
             name: raw.name,
-            disk_path: PathBuf::from(raw.disk_path),
+            path: PathBuf::from(raw.path),
             size_gb: raw.size_gb,
             allocation_mode: allocation_mode,
             created_at,
@@ -110,7 +110,7 @@ impl From<Qcow2DiskConfig> for RawQcow2DiskConfig {
 
         RawQcow2DiskConfig {
             name: config.name,
-            disk_path: config.disk_path.to_string_lossy().to_string(),
+            path: config.path.to_string_lossy().to_string(),
             size_gb: config.size_gb,
             allocation_mode,
             created_at: config.created_at.to_rfc3339(),

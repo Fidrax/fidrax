@@ -16,7 +16,7 @@ impl Qcow2DiskManager {
     pub async fn create_disk(&self, config: &Qcow2DiskConfig) -> Result<(), DiskError> {
         self.store.create(config).await?;
 
-        let disk = Qcow2Disk::new(&config.disk_path);
+        let disk = Qcow2Disk::new(&config.path);
         disk.create_disk(&config.allocation_mode, &config.size_gb)
             .await?;
 
@@ -26,7 +26,7 @@ impl Qcow2DiskManager {
     pub async fn remove_disk(&self, name: &str) -> Result<(), DiskError> {
         let config = self.store.read(name).await?;
 
-        let disk = Qcow2Disk::new(config.disk_path);
+        let disk = Qcow2Disk::new(config.path);
         disk.remove_disk().await?;
 
         self.store.delete(name).await?;
@@ -38,7 +38,7 @@ impl Qcow2DiskManager {
         let mut config = self.store.read(name).await?;
 
         config.size_gb = new_size_gb;
-        let disk = Qcow2Disk::new(config.disk_path.clone());
+        let disk = Qcow2Disk::new(config.path.clone());
         disk.resize_disk(new_size_gb).await?;
         self.store.update(&config).await?;
 

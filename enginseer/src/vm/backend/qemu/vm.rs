@@ -47,38 +47,50 @@ impl QemuVM {
 // impl VirtualMachine<&QemuConfig> for QemuVM {
 impl QemuVM {
     pub async fn start(&self, config: &QemuConfig) -> Result<(), VMError> {
-        let disk = match self.disk_config(&config.disk_config_path).await {
-            Ok(disk) => disk,
-            Err(err) => return Err(VMError::DiskError(err)),
-        };
+        let mut disks = Vec::new();
 
-        let status = Command::new("qemu-system-x86_64")
-            // name of vm
-            .arg("-name")
-            .arg(&config.name)
-            // cpu
-            .arg("-smp")
-            .arg(config.vcpu.to_string())
-            // memory
-            .arg("-m")
-            .arg(config.memory_mb.to_string())
-            // disk
-            .arg("-drive")
-            .arg(format!(
+        for disk in &config.disks {
+            let disk_config = self.disk_config(disk).await.map_err(|err| VMError::DiskError(err))?;
+            let arg = format!(
                 "file={},if=virtio,cache=none,aio=native",
-                disk.disk_path.display()
-            ))
-            // qmp path
-            .arg("-qmp")
-            .arg(format!(
-                "unix:{}/{},server=on,wait=off",
-                "run/qmp", &config.name
-            ))
-            // run vm in background
-            .arg("-daemonize")
-            .status()
-            .await
-            .map_err(|err| VMError::CmdError(config.name.clone(), err))?;
+                disk_config.path.display()
+            );
+            disks.push(arg);
+        }
+
+        let mut cmd = Command::new("qemu-system-x86_64");
+            cmd
+                // name of vm
+                .arg("-name")
+                .arg(&config.name)
+                // cpu
+                .arg("-smp")
+                .arg(config.vcpu.to_string())
+                // memory
+                .arg("-m")
+                .arg(config.memory_mb.to_string());
+
+            for drive in disks {
+                cmd
+                // disk
+                .arg("-drive")
+                .arg(drive);
+            }
+
+            cmd
+                // qmp path
+                .arg("-qmp")
+                .arg(format!(
+                        "unix:{}/{},server=on,wait=off",
+                        "run/qmp", &config.name
+                ))
+                // run vm in background
+                .arg("-daemonize");
+
+            let status = cmd
+                .status()
+                .await
+                .map_err(|err| VMError::CmdError(config.name.clone(), err))?;
 
         if !status.success() {
             return Err(VMError::QemuStartFailed(config.name.clone(), status.code()));
