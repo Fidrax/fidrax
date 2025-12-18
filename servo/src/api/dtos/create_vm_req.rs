@@ -13,7 +13,7 @@ pub struct CreateVMRequest {
     pub name: String,
     pub memory_mb: u64,
     pub vcpu: u8,
-    pub disk_config_path: String,
+    pub disks: Vec<String>,
 }
 
 impl CreateVMRequest {
@@ -40,10 +40,14 @@ impl CreateVMRequest {
             return Err(DTOSErrors::VMCpuSizeInvalid("vm vcpu is invalid".into()));
         }
 
-        if !self.disk_config_path.starts_with("/") {
-            return Err(DTOSErrors::DiskPathStartPathInvalid(
-                self.disk_config_path.clone(),
-            ));
+        let mut disks: Vec<String> = Vec::new();
+
+        for disk in &self.disks {
+            if !disk.starts_with("/") { 
+                return Err(DTOSErrors::DiskPathStartPathInvalid(
+                        disk.clone(),
+                ));
+            }
         }
 
         Ok(())
@@ -56,11 +60,16 @@ impl TryFrom<CreateVMRequest> for QemuConfig {
     fn try_from(req: CreateVMRequest) -> Result<Self, Self::Error> {
         let _ = req.validate().map_err(|err| ServoErrors::DTOS(err));
 
+        let mut disks: Vec<PathBuf> = Vec::new();
+        for disk in &req.disks {
+            disks.push(PathBuf::from(disk));
+        }
+
         Ok(QemuConfig {
             name: req.name,
             memory_mb: req.memory_mb,
             vcpu: req.vcpu,
-            disk_config_path: PathBuf::from(req.disk_config_path),
+            disks: disks, 
             created_at: Utc::now(),
         })
     }

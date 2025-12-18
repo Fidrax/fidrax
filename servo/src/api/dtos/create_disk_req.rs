@@ -12,7 +12,7 @@ use crate::api::dtos::errors::DTOSErrors;
 pub struct CreateDiskRequest {
     pub name: String,
     pub size_gb: u64,
-    pub disk_path: String,
+    pub path: String,
     pub alloc_mode: String,
 }
 
@@ -36,12 +36,12 @@ impl CreateDiskRequest {
             )));
         }
 
-        if self.disk_path.trim().is_empty() {
+        if self.path.trim().is_empty() {
             return Err(DTOSErrors::DiskPathEmpty("disk path is empty".into()));
         }
 
-        if !self.disk_path.starts_with("/") {
-            return Err(DTOSErrors::DiskPathStartPathInvalid(self.disk_path.clone()));
+        if !self.path.starts_with("/") {
+            return Err(DTOSErrors::DiskPathStartPathInvalid(self.path.clone()));
         }
 
         match self.alloc_mode.clone().to_lowercase().as_str() {
@@ -63,10 +63,10 @@ impl TryFrom<CreateDiskRequest> for Qcow2DiskConfig {
         let alloc_mode = Qcow2DiskAllocationMode::try_from(req.alloc_mode)
             .map_err(|e| ServoErrors::DTOS(DTOSErrors::Disk(e)))?;
 
-        let disk_path = PathBuf::from(req.disk_path).join(&req.name).with_extension("qcow");
+        let path = PathBuf::from(req.path).join(&req.name).with_extension("qcow");
         Ok(Qcow2DiskConfig {
             name: req.name,
-            disk_path: disk_path,
+            path: path,
             size_gb: req.size_gb,
             allocation_mode: alloc_mode,
             created_at: Utc::now(),

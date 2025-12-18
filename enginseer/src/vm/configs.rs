@@ -10,7 +10,7 @@ pub struct QemuConfig {
     pub name: String,
     pub memory_mb: u64,
     pub vcpu: u8,
-    pub disk_config_path: PathBuf,
+    pub disks: Vec<PathBuf>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -32,8 +32,10 @@ impl QemuConfig {
             ));
         }
 
-        if !self.disk_config_path.exists() {
-            return Err(VMError::InvalidConfig("vm disk path does not exist".into()));
+        for disk in &self.disks {
+            if !disk.exists() {
+                return Err(VMError::InvalidConfig(format!("vm disk path does not exist for disk {:?}", disk)));
+            }
         }
 
         if self.created_at > Utc::now() {
@@ -45,12 +47,13 @@ impl QemuConfig {
         Ok(())
     }
 }
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RawQemuConfig {
     pub name: String,
     pub memory_mb: u64,
     pub vcpu: u8,
-    pub disk_config_path: String,
+    pub disks: Vec<String>,
     pub created_at: String,
 }
 
@@ -65,11 +68,16 @@ impl TryFrom<RawQemuConfig> for QemuConfig {
             ))
         })?;
 
+        let mut disks = Vec::new();
+        for disk in raw.disks {
+            disks.push(PathBuf::from(disk));
+        }
+        
         Ok(QemuConfig {
             name: raw.name,
             memory_mb: raw.memory_mb,
             vcpu: raw.vcpu,
-            disk_config_path: PathBuf::from(raw.disk_config_path),
+            disks: disks,
             created_at,
         })
     }
@@ -77,11 +85,16 @@ impl TryFrom<RawQemuConfig> for QemuConfig {
 
 impl From<QemuConfig> for RawQemuConfig {
     fn from(config: QemuConfig) -> Self {
+        let mut disks = Vec::new();
+        for disk in config.disks {
+            disks.push(disk.to_string_lossy().to_string());
+        }
+        
         RawQemuConfig {
             name: config.name,
             memory_mb: config.memory_mb,
             vcpu: config.vcpu,
-            disk_config_path: config.disk_config_path.to_string_lossy().to_string(),
+            disks: disks, 
             created_at: config.created_at.to_rfc3339(),
         }
     }
