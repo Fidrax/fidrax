@@ -1,6 +1,8 @@
 use actix_cors::Cors;
 use actix_web::{App, HttpServer, middleware::Logger, web};
+use log::{debug};
 
+use tokio::fs::{self};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -36,8 +38,14 @@ pub struct ApiDoc;
 pub async fn start_http_server(cfg: ServoConfig) -> Result<(), std::io::Error> {
     let host_url = cfg.app.get_host_url();
 
+    // TODO require error handling
+    let _ = fs::create_dir_all(cfg.app.disk_config_path.clone()).await;
+    debug!("{:#?} dir created", cfg.app.disk_config_path);
+    let _ = fs::create_dir_all(cfg.app.vm_config_path.clone()).await;
+    debug!("{:#?} dir created", cfg.app.vm_config_path);
+
     let disk_service = DiskService::new(cfg.app.disk_config_path.clone());
-    let vm_service = QemuVMService::new(cfg.app.vm_config_path.clone(), cfg.app.disk_config_path.clone());
+    let vm_service = QemuVMService::new(cfg.app.vm_config_path.clone(), cfg.app.disk_config_path.clone(), cfg.app.run_time_config_path.clone());
 
     // Start the HTTP server
     let _ = HttpServer::new(move || {

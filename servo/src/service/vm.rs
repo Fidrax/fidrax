@@ -13,8 +13,8 @@ pub struct QemuVMService {
 }
 
 impl QemuVMService {
-    pub fn new(vm_base_dir: PathBuf, disk_base_dir: PathBuf) -> Self {
-        let manager = QemuManager::new(vm_base_dir, disk_base_dir);
+    pub fn new(vm_base_dir: PathBuf, disk_base_dir: PathBuf, run_time_dir: PathBuf) -> Self {
+        let manager = QemuManager::new(vm_base_dir, disk_base_dir, run_time_dir);
         Self { manager: manager }
     }
 

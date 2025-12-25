@@ -25,11 +25,12 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct QemuVM {
     disk_store: Qcow2DiskStore,
+    run_time: PathBuf,
 }
 
 impl QemuVM {
-    pub fn new(disk_store: Qcow2DiskStore) -> Self {
-        Self { disk_store }
+    pub fn new(disk_store: Qcow2DiskStore, run_time: PathBuf) -> Self {
+        Self { disk_store, run_time }
     }
 
     async fn disk_config(&self, config_path: &PathBuf) -> Result<Qcow2DiskConfig, DiskError> {
@@ -37,7 +38,7 @@ impl QemuVM {
     }
 
     async fn qmp_connect(&self, config: &QemuConfig) -> Result<QmpClient, VMError> {
-        let socket = PathBuf::from("run/qmp").join(&config.name);
+        let socket = self.run_time.join(&config.name);
         Ok(QmpClient::connect(socket)
             .await
             .map_err(|err| VMError::QmpClient(config.name.clone(), err))?)
@@ -82,7 +83,7 @@ impl QemuVM {
                 .arg("-qmp")
                 .arg(format!(
                         "unix:{}/{},server=on,wait=off",
-                        "run/qmp", &config.name
+                        self.run_time.clone().to_string_lossy().to_string(), &config.name
                 ))
                 // run vm in background
                 .arg("-daemonize");

@@ -9,11 +9,11 @@ pub struct QemuManager{
 }
 
 impl QemuManager{
-    pub fn new(vm_base_dir: PathBuf, disk_base_dir: PathBuf) -> Self {
+    pub fn new(vm_base_dir: PathBuf, disk_base_dir: PathBuf, run_time_dir: PathBuf) -> Self {
         let store = QemuVMStore::new(vm_base_dir);
         let disk_store = Qcow2DiskStore::new(disk_base_dir);
 
-        let vm = QemuVM::new(disk_store);
+        let vm = QemuVM::new(disk_store, run_time_dir);
         Self { store: store, vm: vm }
     }
 

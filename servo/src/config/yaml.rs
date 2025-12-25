@@ -25,6 +25,7 @@ pub struct Application {
     pub server_port: u16,
     pub disk_config_path: PathBuf,
     pub vm_config_path: PathBuf,
+    pub run_time_config_path: PathBuf,
 }
 
 impl Application {
