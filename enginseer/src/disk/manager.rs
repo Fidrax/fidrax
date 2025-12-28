@@ -1,5 +1,5 @@
 use crate::{
-    disk::{configs::Qcow2DiskConfig, errors::DiskError, qcow2::Qcow2Disk, store::Qcow2DiskStore},
+    disk::{configs::{Qcow2DiskConfig, DiskConfigEntry}, errors::DiskError, qcow2::Qcow2Disk, store::Qcow2DiskStore},
     traits::config::Config,
 };
 
@@ -13,8 +13,10 @@ impl Qcow2DiskManager {
         Self { store }
     }
 
-    pub async fn create_disk(&self, config: &Qcow2DiskConfig) -> Result<(), DiskError> {
-        self.store.create(config).await?;
+    pub async fn create_disk(&self, entry: &DiskConfigEntry) -> Result<(), DiskError> {
+        self.store.create(entry).await?;
+
+        let config = &entry.config;
 
         let disk = Qcow2Disk::new(&config.path);
         disk.create_disk(&config.allocation_mode, &config.size_gb)
@@ -35,17 +37,17 @@ impl Qcow2DiskManager {
     }
 
     pub async fn update_disk(&self, name: &str, new_size_gb: u64) -> Result<(), DiskError> {
-        let mut config = self.store.read(name).await?;
+        let mut entry = self.store.read(name).await?;
 
-        config.size_gb = new_size_gb;
-        let disk = Qcow2Disk::new(config.path.clone());
+        entry.config.size_gb = new_size_gb;
+        let disk = Qcow2Disk::new(entry.config.path.clone());
         disk.resize_disk(new_size_gb).await?;
-        self.store.update(&config).await?;
+        self.store.update(&entry).await?;
 
         Ok(())
     }
 
-    pub async fn list_disks(&self) -> Result<Vec<Qcow2DiskConfig>, DiskError> {
+    pub async fn list_disks(&self) -> Result<Vec<DiskConfigEntry>, DiskError> {
         self.store.list().await
     }
 }

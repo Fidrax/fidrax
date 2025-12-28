@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use tokio::process::Command;
 
 use crate::{
-    disk::{configs::Qcow2DiskConfig, errors::DiskError, store::Qcow2DiskStore},
+    disk::{configs::{Qcow2DiskConfig, DiskConfigEntry}, errors::DiskError, store::Qcow2DiskStore},
     traits::config::Config,
     vm::{
         backend::qemu::{
@@ -32,7 +32,7 @@ impl QemuVM {
         Self { disk_store }
     }
 
-    async fn disk_config(&self, config_path: &PathBuf) -> Result<Qcow2DiskConfig, DiskError> {
+    async fn disk_config(&self, config_path: &PathBuf) -> Result<DiskConfigEntry, DiskError> {
         Ok(self.disk_store.read_by_path(config_path).await?)
     }
 

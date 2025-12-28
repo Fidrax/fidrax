@@ -117,3 +117,11 @@ impl From<Qcow2DiskConfig> for RawQcow2DiskConfig {
         }
     }
 }
+
+
+#[derive(Debug, Clone)]
+pub struct DiskConfigEntry {
+    pub path: PathBuf,
+    pub config: Qcow2DiskConfig,
+}
+

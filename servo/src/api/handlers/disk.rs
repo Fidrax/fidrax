@@ -1,7 +1,7 @@
 use actix_web::{HttpResponse, Responder, web};
 
 use crate::{
-    api::dtos::{create_disk_req::CreateDiskRequest, disk_config::ResponseQcow2DiskConfig},
+    api::dtos::{create_disk_req::CreateDiskRequest, disk_config::{ResponseQcow2DiskConfig, ResponseDiskConfigEntry}},
     service::disk::DiskService,
 };
 
@@ -81,9 +81,9 @@ pub async fn update_disk(
 pub async fn list_disks(svc: web::Data<DiskService>) -> impl Responder {
     match svc.list_disks().await {
         Ok(qcow_configs) => {
-            let disks: Vec<ResponseQcow2DiskConfig> = qcow_configs
+            let disks: Vec<ResponseDiskConfigEntry> = qcow_configs
                 .into_iter()
-                .map(ResponseQcow2DiskConfig::from)
+                .map(ResponseDiskConfigEntry::from)
                 .collect();
             HttpResponse::Ok().json(disks)
         }

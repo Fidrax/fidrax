@@ -1,4 +1,4 @@
-use enginseer::disk::configs::{Qcow2DiskAllocationMode, Qcow2DiskConfig};
+use enginseer::disk::configs::{Qcow2DiskAllocationMode, DiskConfigEntry};
 use serde::Serialize;
 use utoipa::ToSchema;
 
@@ -11,18 +11,28 @@ pub struct ResponseQcow2DiskConfig {
     pub created_at: String,
 }
 
-impl From<Qcow2DiskConfig> for ResponseQcow2DiskConfig {
-    fn from(cfg: Qcow2DiskConfig) -> Self {
-        ResponseQcow2DiskConfig {
-            name: cfg.name,
-            path: cfg.path.to_string_lossy().to_string(),
-            size_gb: cfg.size_gb,
-            allocation_mode: match cfg.allocation_mode {
-                Qcow2DiskAllocationMode::Sparse => "Sparse".to_string(),
-                Qcow2DiskAllocationMode::Full => "Full".to_string(),
-                Qcow2DiskAllocationMode::Metadata => "Metadata".to_string(),
-            },
-            created_at: cfg.created_at.to_rfc3339(),
+
+#[derive(Serialize, ToSchema, Debug, Clone)]
+pub struct ResponseDiskConfigEntry {
+    path: String,
+    config: ResponseQcow2DiskConfig,
+}
+
+impl From<DiskConfigEntry> for ResponseDiskConfigEntry {
+    fn from(entry: DiskConfigEntry) -> Self {
+        Self {
+            path: entry.path.to_string_lossy().to_string(),
+            config: ResponseQcow2DiskConfig {
+                name: entry.config.name,
+                path: entry.config.path.to_string_lossy().to_string(),
+                size_gb: entry.config.size_gb,
+                allocation_mode: match entry.config.allocation_mode {
+                    Qcow2DiskAllocationMode::Sparse => "Sparse".to_string(),
+                    Qcow2DiskAllocationMode::Full => "Full".to_string(),
+                    Qcow2DiskAllocationMode::Metadata => "Metadata".to_string(),
+                },
+                created_at: entry.config.created_at.to_rfc3339(),
+            }
         }
     }
 }

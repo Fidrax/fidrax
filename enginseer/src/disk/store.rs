@@ -3,7 +3,7 @@ use tokio::fs::{self};
 
 use crate::{
     disk::{
-        configs::{Qcow2DiskConfig, RawQcow2DiskConfig},
+        configs::{Qcow2DiskConfig, RawQcow2DiskConfig, DiskConfigEntry},
         errors::DiskError,
     },
     traits::config::Config,
@@ -24,8 +24,8 @@ impl Qcow2DiskStore {
     }
 }
 
-impl Config<Qcow2DiskConfig, DiskError> for Qcow2DiskStore {
-    async fn read(&self, name: &str) -> Result<Qcow2DiskConfig, DiskError> {
+impl Config<DiskConfigEntry, DiskError> for Qcow2DiskStore {
+    async fn read(&self, name: &str) -> Result<DiskConfigEntry, DiskError> {
         let config_path = self.base_dir.join(name).with_extension("yaml");
 
         let content = fs::read_to_string(&config_path)
@@ -33,14 +33,19 @@ impl Config<Qcow2DiskConfig, DiskError> for Qcow2DiskStore {
             .map_err(|err| DiskError::IOError(config_path.clone(), err))?;
 
         let raw_config: RawQcow2DiskConfig = serde_yaml::from_str(&content)
-            .map_err(|err| DiskError::SerializationFailed(config_path, err.to_string()))?;
+            .map_err(|err| DiskError::SerializationFailed(config_path.clone(), err.to_string()))?;
 
-        Ok(Qcow2DiskConfig::try_from(raw_config).map_err(|e| {
+        let config = Qcow2DiskConfig::try_from(raw_config).map_err(|e| {
             DiskError::InvalidConfig(format!("failed to convert raw config: {:?}", e.to_string()))
-        })?)
+        })?;
+        Ok(
+            DiskConfigEntry {
+                path: config_path.to_path_buf(),
+                config,
+            })
     }
 
-    async fn read_by_path(&self, config_path: &PathBuf) -> Result<Qcow2DiskConfig, DiskError> {
+    async fn read_by_path(&self, config_path: &PathBuf) -> Result<DiskConfigEntry, DiskError> {
         let content = fs::read_to_string(&config_path)
             .await
             .map_err(|err| DiskError::IOError(config_path.clone(), err))?;
@@ -48,12 +53,19 @@ impl Config<Qcow2DiskConfig, DiskError> for Qcow2DiskStore {
         let raw_config: RawQcow2DiskConfig = serde_yaml::from_str(&content)
             .map_err(|err| DiskError::SerializationFailed(config_path.to_path_buf(), err.to_string()))?;
 
-        Ok(Qcow2DiskConfig::try_from(raw_config).map_err(|e| {
+        let config = Qcow2DiskConfig::try_from(raw_config).map_err(|e| {
             DiskError::InvalidConfig(format!("failed to convert raw config: {:?}", e.to_string()))
-        })?)
+        })?;
+
+        Ok (
+            DiskConfigEntry {
+                path: config_path.to_path_buf(),
+                config,
+            })
     }
 
-    async fn create(&self, config: &Qcow2DiskConfig) -> Result<(), DiskError> {
+    async fn create(&self, entry: &DiskConfigEntry) -> Result<(), DiskError> {
+        let config = &entry.config; 
         config.validate()?;
 
         let config_path = self.base_dir.join(&config.name).with_extension("yaml");
@@ -77,7 +89,8 @@ impl Config<Qcow2DiskConfig, DiskError> for Qcow2DiskStore {
         Ok(())
     }
 
-    async fn update(&self, config: &Qcow2DiskConfig) -> Result<(), DiskError> {
+    async fn update(&self, entry: &DiskConfigEntry) -> Result<(), DiskError> {
+        let config = &entry.config;
         config.validate()?;
 
         let config_path = self.base_dir.join(&config.name).with_extension("yaml");
@@ -112,8 +125,8 @@ impl Config<Qcow2DiskConfig, DiskError> for Qcow2DiskStore {
         Ok(())
     }
 
-    async fn list(&self) -> Result<Vec<Qcow2DiskConfig>, DiskError> {
-        let mut configs: Vec<Qcow2DiskConfig> = Vec::new();
+    async fn list(&self) -> Result<Vec<DiskConfigEntry>, DiskError> {
+        let mut configs: Vec<DiskConfigEntry> = Vec::new();
 
         let mut dir = fs::read_dir(&self.base_dir)
             .await
@@ -124,21 +137,24 @@ impl Config<Qcow2DiskConfig, DiskError> for Qcow2DiskStore {
             .await
             .map_err(|err| DiskError::IOError(self.base_dir.clone(), err))?
         {
-            let path = entry.path();
+            let path = &entry.path();
             if path.extension().and_then(|ext| ext.to_str()) != Some("yaml") {
                 continue;
             }
 
             let content = fs::read_to_string(&path)
                 .await
-                .map_err(|err| DiskError::IOError(path, err))?;
+                .map_err(|err| DiskError::IOError(path.to_path_buf(), err))?;
 
             let raw: RawQcow2DiskConfig = serde_yaml::from_str(&content)
                 .map_err(|err| DiskError::InvalidConfig(err.to_string()))?;
 
             let config: Qcow2DiskConfig = raw.try_into().map_err(|err| err)?;
-
-            configs.push(config);
+            
+            configs.push(DiskConfigEntry {
+                path: entry.path(),
+                config,
+            });
         }
 
         Ok(configs)

@@ -1,5 +1,5 @@
 use chrono::Utc;
-use enginseer::disk::configs::{Qcow2DiskAllocationMode, Qcow2DiskConfig};
+use enginseer::disk::configs::{Qcow2DiskAllocationMode, Qcow2DiskConfig, DiskConfigEntry};
 use regex::Regex;
 use serde::Deserialize;
 use utoipa::ToSchema;
@@ -55,7 +55,7 @@ impl CreateDiskRequest {
     }
 }
 
-impl TryFrom<CreateDiskRequest> for Qcow2DiskConfig {
+impl TryFrom<CreateDiskRequest> for DiskConfigEntry {
     type Error = ServoErrors;
 
     fn try_from(req: CreateDiskRequest) -> Result<Self, Self::Error> {
@@ -64,12 +64,16 @@ impl TryFrom<CreateDiskRequest> for Qcow2DiskConfig {
             .map_err(|e| ServoErrors::DTOS(DTOSErrors::Disk(e)))?;
 
         let path = PathBuf::from(req.path).join(&req.name).with_extension("qcow");
-        Ok(Qcow2DiskConfig {
-            name: req.name,
-            path: path,
-            size_gb: req.size_gb,
-            allocation_mode: alloc_mode,
-            created_at: Utc::now(),
-        })
+        Ok(
+            DiskConfigEntry {
+                path: PathBuf::new(), 
+                config: Qcow2DiskConfig {
+                    name: req.name,
+                    path: path,
+                    size_gb: req.size_gb,
+                    allocation_mode: alloc_mode,
+                    created_at: Utc::now(),
+                }
+            })
     }
 }
