@@ -5,7 +5,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    api::{dtos::{create_disk_req::CreateDiskRequest, create_vm_req::CreateVMRequest}, handlers, routes::app::app_routes},
+    api::{dtos::{create_disk_req::CreateDiskRequest, create_vm_req::CreateVMRequest, disk_config::{ResponseDiskConfigEntry, ResponseQcow2DiskConfig}, vm_config::{ResponseQemuConfig}}, handlers, routes::app::app_routes},
     config::yaml::ServoConfig, service::{disk::DiskService, vm::QemuVMService},
 };
 
@@ -23,7 +23,7 @@ use crate::{
         handlers::vm::status_vm,
     ),
     components(
-        schemas(CreateDiskRequest, CreateVMRequest)
+        schemas(CreateDiskRequest, CreateVMRequest, ResponseDiskConfigEntry, ResponseQcow2DiskConfig, ResponseQemuConfig)
     ),
     tags(
         (name = "VMs", description = "VMs management api"),
