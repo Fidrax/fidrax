@@ -26,13 +26,13 @@ impl QemuVMStore {
 
 impl Config<QemuConfig, VMError> for QemuVMStore {
     async fn read(&self, name: &str) -> Result<QemuConfig, VMError> {
-        let config_path = self.base_dir.join(name).with_extension("yaml");
+        let config_path = self.base_dir.join(name).with_extension("toml");
 
         let content = fs::read_to_string(&config_path)
             .await
             .map_err(|err| VMError::IOError(config_path.clone(), err))?;
 
-        let raw_config: RawQemuConfig = serde_yaml::from_str(&content)
+        let raw_config: RawQemuConfig = toml::from_str(&content)
             .map_err(|err| VMError::SerializationFailed(config_path, err.to_string()))?;
 
         Ok(QemuConfig::try_from(raw_config).map_err(|err| {
@@ -48,7 +48,7 @@ impl Config<QemuConfig, VMError> for QemuVMStore {
             .await
             .map_err(|err| VMError::IOError(config_path.clone(), err))?;
 
-        let raw_config: RawQemuConfig = serde_yaml::from_str(&content).map_err(|err| {
+        let raw_config: RawQemuConfig = toml::from_str(&content).map_err(|err| {
             VMError::SerializationFailed(config_path.to_path_buf(), err.to_string())
         })?;
 
@@ -62,14 +62,19 @@ impl Config<QemuConfig, VMError> for QemuVMStore {
 
     async fn create(&self, config: &QemuConfig) -> Result<(), VMError> {
         config.validate()?;
+        
+        fs::create_dir_all(&self.base_dir)
+        .await
+        .map_err(|err| VMError::IOError(self.base_dir.clone(), err))?;
 
-        let config_path = self.base_dir.join(&config.name).with_extension("yaml");
+
+        let config_path = self.base_dir.join(&config.name).with_extension("toml");
         if config_path.exists() {
             return Err(VMError::VMConfigAlreadyExist(config_path));
         }
 
         let raw_config: RawQemuConfig = RawQemuConfig::from(config.clone());
-        let content = serde_yaml::to_string(&raw_config).map_err(|err| {
+        let content = toml::to_string_pretty(&raw_config).map_err(|err| {
             VMError::InvalidConfig(format!("{}: {:?}", config.name.clone(), err.to_string()))
         })?;
 
@@ -83,7 +88,7 @@ impl Config<QemuConfig, VMError> for QemuVMStore {
     async fn update(&self, config: &QemuConfig) -> Result<(), VMError> {
         config.validate()?;
 
-        let config_path = self.base_dir.join(&config.name).with_extension("yaml");
+        let config_path = self.base_dir.join(&config.name).with_extension("toml");
         if !config_path.exists() {
             return Err(VMError::NotFound(
                 config_path.clone().to_string_lossy().to_string(),
@@ -91,7 +96,7 @@ impl Config<QemuConfig, VMError> for QemuVMStore {
         }
 
         let raw_config: RawQemuConfig = RawQemuConfig::from(config.clone());
-        let content = serde_yaml::to_string(&raw_config).map_err(|err| {
+        let content = toml::to_string_pretty(&raw_config).map_err(|err| {
             VMError::InvalidConfig(format!("{}: {:?}", config.name.clone(), err.to_string()))
         })?;
 
@@ -103,7 +108,7 @@ impl Config<QemuConfig, VMError> for QemuVMStore {
     }
 
     async fn delete(&self, name: &str) -> Result<(), VMError> {
-        let file = self.base_dir.join(name).with_extension("yaml");
+        let file = self.base_dir.join(name).with_extension("toml");
 
         if !file.exists() {
             return Err(VMError::NotFound(
@@ -131,7 +136,7 @@ impl Config<QemuConfig, VMError> for QemuVMStore {
             .map_err(|err| VMError::IOError(self.base_dir.clone(), err))?
         {
             let path = entry.path();
-            if path.extension().and_then(|ext| ext.to_str()) != Some("yaml") {
+            if path.extension().and_then(|ext| ext.to_str()) != Some("toml") {
                 continue;
             }
 
@@ -139,7 +144,7 @@ impl Config<QemuConfig, VMError> for QemuVMStore {
                 .await
                 .map_err(|err| VMError::IOError(path, err))?;
 
-            let raw: RawQemuConfig = serde_yaml::from_str(&content)
+            let raw: RawQemuConfig = toml::from_str(&content)
                 .map_err(|err| VMError::InvalidConfig(err.to_string()))?;
 
             let config: QemuConfig = raw.try_into().map_err(|err| err)?;

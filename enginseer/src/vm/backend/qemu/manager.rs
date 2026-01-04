@@ -1,20 +1,30 @@
 use std::path::PathBuf;
 
-use crate::{disk::store::Qcow2DiskStore, traits::config::Config, vm::{backend::qemu::{state::VMState, vm::QemuVM}, configs::QemuConfig, errors::VMError, store::QemuVMStore}};
+use crate::{
+    disk::store::StorageStore, traits::config::Config, vm::{
+        backend::qemu::{state::VMState, vm::QemuVM},
+        configs::QemuConfig,
+        errors::VMError,
+        store::QemuVMStore,
+    }
+};
 
 #[derive(Debug, Clone)]
-pub struct QemuManager{
+pub struct QemuManager {
     store: QemuVMStore,
     vm: QemuVM,
 }
 
-impl QemuManager{
+impl QemuManager {
     pub fn new(vm_base_dir: PathBuf, disk_base_dir: PathBuf) -> Self {
         let store = QemuVMStore::new(vm_base_dir);
-        let disk_store = Qcow2DiskStore::new(disk_base_dir);
+        let disk_store = StorageStore::new(disk_base_dir);
 
         let vm = QemuVM::new(disk_store);
-        Self { store: store, vm: vm }
+        Self {
+            store: store,
+            vm: vm,
+        }
     }
 
     pub async fn create(&self, config: &QemuConfig) -> Result<(), VMError> {
@@ -49,4 +59,3 @@ impl QemuManager{
         self.store.list().await
     }
 }
-

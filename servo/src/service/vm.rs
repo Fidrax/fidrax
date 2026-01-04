@@ -14,7 +14,7 @@ pub struct QemuVMService {
 
 impl QemuVMService {
     pub fn new(vm_base_dir: PathBuf, disk_base_dir: PathBuf) -> Self {
-        let manager = QemuManager::new(vm_base_dir, disk_base_dir);
+        let manager = QemuManager::new(vm_base_dir.join("vms"), disk_base_dir);
         Self { manager: manager }
     }
 

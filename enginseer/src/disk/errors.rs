@@ -56,4 +56,17 @@ pub enum DiskError {
 
     #[error("disk config remove error {0:?}")]
     DiskConfigRemove(PathBuf),
+
+    // Docker Volume
+    #[error("docker volume creation failed {0:?}")]
+    DockerVolumeFailed(String),
+
+    #[error("docker volume status {0:?}")]
+    DockerVolumeStatus(String, Option<i32>),
+
+    #[error("docker volume delete failed {0:?}")]
+    DockerVolumeDeleteFailed(String, String),
+
+    #[error("operation not implemented {0:?}")]
+    UnsupportedOperation(String),
 }

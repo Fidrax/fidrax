@@ -4,5 +4,5 @@ app:
   server_host: "0.0.0.0"
   server_port: 8080
   disk_config_path: "fidrax/configs"
-  vm_config_path: "fidrax/runtime"
+  vm_config_path: "fidrax/configs"
 

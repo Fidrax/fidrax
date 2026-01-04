@@ -1,53 +1,121 @@
-use crate::{
-    disk::{configs::{Qcow2DiskConfig, DiskConfigEntry}, errors::DiskError, qcow2::Qcow2Disk, store::Qcow2DiskStore},
-    traits::config::Config,
+use log::{debug, info};
+
+use crate::disk::{
+    configs::storage::{StorageConfig, StorageUnit, VMDiskFormat},
+    docker_volume::DockerVolume,
+    errors::DiskError,
+    qcow2::Qcow2Disk,
+    store::StorageStore,
 };
 
 #[derive(Debug, Clone)]
-pub struct Qcow2DiskManager {
-    pub store: Qcow2DiskStore,
+pub struct StorageManager {
+    pub store: StorageStore,
 }
 
-impl Qcow2DiskManager {
-    pub fn new(store: Qcow2DiskStore) -> Self {
+impl StorageManager {
+    pub fn new(store: StorageStore) -> Self {
         Self { store }
     }
 
-    pub async fn create_disk(&self, entry: &DiskConfigEntry) -> Result<(), DiskError> {
-        self.store.create(entry).await?;
+    pub async fn create(&self, unit: &StorageUnit) -> Result<(), DiskError> {
+        info!("storage create requested: {}", unit.id);
+        unit.config.validate()?;
 
-        let config = &entry.config;
-
-        let disk = Qcow2Disk::new(&config.path);
-        disk.create_disk(&config.allocation_mode, &config.size_gb)
-            .await?;
-
-        Ok(())
-    }
-
-    pub async fn remove_disk(&self, name: &str) -> Result<(), DiskError> {
-        let config = self.store.read(name).await?;
-
-        let disk = Qcow2Disk::new(config.path);
-        disk.remove_disk().await?;
-
-        self.store.delete(name).await?;
+        self.store.create(unit).await?;
+        self.apply_create(unit).await?;
+        info!("storage '{}' created successfully", unit.id);
 
         Ok(())
     }
 
-    pub async fn update_disk(&self, name: &str, new_size_gb: u64) -> Result<(), DiskError> {
-        let mut entry = self.store.read(name).await?;
+    pub async fn delete(&self, id: &str) -> Result<(), DiskError> {
+        let unit = self.store.read(id).await?;
 
-        entry.config.size_gb = new_size_gb;
-        let disk = Qcow2Disk::new(entry.config.path.clone());
-        disk.resize_disk(new_size_gb).await?;
-        self.store.update(&entry).await?;
+        self.apply_delete(&unit).await?;
 
-        Ok(())
+        self.store.delete(id).await
     }
 
-    pub async fn list_disks(&self) -> Result<Vec<DiskConfigEntry>, DiskError> {
+    pub async fn update(&self, unit: &StorageUnit) -> Result<(), DiskError> {
+        unit.config.validate()?;
+
+        self.apply_update(unit).await?;
+
+        self.store.update(unit).await
+    }
+
+    pub async fn list(&self) -> Result<Vec<StorageUnit>, DiskError> {
         self.store.list().await
+    }
+}
+
+impl StorageManager {
+    async fn apply_create(&self, unit: &StorageUnit) -> Result<(), DiskError> {
+        debug!("applying create for storage '{}'", unit.id);
+
+        match &unit.config {
+            StorageConfig::VMDisk { common, data } => {
+                debug!("storage '{}' is a VM disk", unit.id);
+                match &data.format {
+                    VMDiskFormat::Qcow2 { allocation_mode } => {
+                        let qcow2 = Qcow2Disk::new(&common.path);
+                        qcow2.create_disk(allocation_mode, &common.size_gb).await
+                    }
+                    _ => Ok(()), // future formats
+                }
+            }
+            StorageConfig::DockerVolume { common, data } => {
+                // require implementation
+                debug!("storage '{}' is a docker volume", unit.id);
+                let volume = DockerVolume::new(&common.name);
+                volume.create(&data.driver, &data.mount_option).await
+            }
+        }
+    }
+
+    async fn apply_delete(&self, unit: &StorageUnit) -> Result<(), DiskError> {
+        debug!("applying delete for storage '{}'", unit.id);
+        match &unit.config {
+            StorageConfig::VMDisk { common, data } => {
+                debug!("storage '{}' is a VM disk", unit.id);
+                match &data.format {
+                    VMDiskFormat::Qcow2 { allocation_mode: _ } => {
+                        let qcow2 = Qcow2Disk::new(&common.path);
+                        qcow2.remove_disk().await
+                    }
+                    _ => Ok(()), // future formats
+                }
+            }
+            StorageConfig::DockerVolume { common, data } => {
+                debug!("storage '{}' is a docker volume", unit.id);
+                // require implementation
+                let volume = DockerVolume::new(&common.name);
+                volume.delete().await
+            }
+        }
+    }
+
+    async fn apply_update(&self, unit: &StorageUnit) -> Result<(), DiskError> {
+        debug!("applying update for storage '{}'", unit.id);
+        match &unit.config {
+            StorageConfig::VMDisk { common, data } => {
+                debug!("storage '{}' is a VM disk", unit.id);
+                if let VMDiskFormat::Qcow2 { allocation_mode: _ } = data.format {
+                    let qcow2 = Qcow2Disk::new(&common.path);
+                    qcow2.resize_disk(common.size_gb).await
+                } else {
+                    Ok(())
+                }
+            }
+            StorageConfig::DockerVolume { common, data } => {
+                debug!("storage '{}' is a docker volume", unit.id);
+                // require implementation
+                info!("docker volume update is not implemented yet!!");
+                Err(DiskError::UnsupportedOperation(
+                    "docker volume update is not supported".to_string(),
+                ))
+            }
+        }
     }
 }

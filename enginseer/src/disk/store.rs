@@ -1,132 +1,112 @@
+use log::{debug, info, warn};
 use std::path::PathBuf;
 use tokio::fs::{self};
 
-use crate::{
-    disk::{
-        configs::{Qcow2DiskConfig, RawQcow2DiskConfig, DiskConfigEntry},
-        errors::DiskError,
-    },
-    traits::config::Config,
-};
+use crate::disk::{configs::storage::StorageUnit, errors::DiskError};
 
 #[derive(Debug, Clone)]
-pub struct Qcow2DiskStore {
+pub struct StorageStore {
     base_dir: PathBuf,
 }
 
-impl Qcow2DiskStore {
+impl StorageStore {
     pub fn new(base_dir: PathBuf) -> Self {
+        info!("initializing StorageStore at {:?}", base_dir);
         Self { base_dir }
     }
 
-    pub fn get_config_path(&self, name: &str) -> PathBuf {
-        PathBuf::from(format!("{}/{}", self.base_dir.display(), name))
-    }
-}
-
-impl Config<DiskConfigEntry, DiskError> for Qcow2DiskStore {
-    async fn read(&self, name: &str) -> Result<DiskConfigEntry, DiskError> {
-        let config_path = self.base_dir.join(name).with_extension("yaml");
-
-        let content = fs::read_to_string(&config_path)
-            .await
-            .map_err(|err| DiskError::IOError(config_path.clone(), err))?;
-
-        let raw_config: RawQcow2DiskConfig = serde_yaml::from_str(&content)
-            .map_err(|err| DiskError::SerializationFailed(config_path.clone(), err.to_string()))?;
-
-        let config = Qcow2DiskConfig::try_from(raw_config).map_err(|e| {
-            DiskError::InvalidConfig(format!("failed to convert raw config: {:?}", e.to_string()))
-        })?;
-        Ok(
-            DiskConfigEntry {
-                path: config_path.to_path_buf(),
-                config,
-            })
+    pub fn path_for(&self, id: &str) -> PathBuf {
+        self.base_dir.join(id).with_extension("toml")
     }
 
-    async fn read_by_path(&self, config_path: &PathBuf) -> Result<DiskConfigEntry, DiskError> {
-        let content = fs::read_to_string(&config_path)
+    pub async fn read(&self, id: &str) -> Result<StorageUnit, DiskError> {
+        let path = self.path_for(id);
+        debug!("reading storage unit '{}'", id);
+
+        let content = fs::read_to_string(&path)
             .await
-            .map_err(|err| DiskError::IOError(config_path.clone(), err))?;
+            .map_err(|err| DiskError::IOError(path.clone(), err))?;
 
-        let raw_config: RawQcow2DiskConfig = serde_yaml::from_str(&content)
-            .map_err(|err| DiskError::SerializationFailed(config_path.to_path_buf(), err.to_string()))?;
+        let unit: StorageUnit = toml::from_str(&content)
+            .map_err(|err| DiskError::SerializationFailed(path.clone(), err.to_string()))?;
 
-        let config = Qcow2DiskConfig::try_from(raw_config).map_err(|e| {
-            DiskError::InvalidConfig(format!("failed to convert raw config: {:?}", e.to_string()))
+        Ok(unit)
+    }
+
+    pub async fn read_by_path(&self, path: &PathBuf) -> Result<StorageUnit, DiskError> {
+        let content = fs::read_to_string(&path)
+            .await
+            .map_err(|err| DiskError::IOError(path.clone(), err))?;
+
+        let unit: StorageUnit = toml::from_str(&content)
+            .map_err(|err| DiskError::SerializationFailed(path.to_path_buf(), err.to_string()))?;
+
+        Ok(unit)
+    }
+
+    pub async fn save(&self, unit: &StorageUnit) -> Result<(), DiskError> {
+        let path = self.path_for(&unit.id);
+        let content = toml::to_string_pretty(&unit).map_err(|err| {
+            DiskError::InvalidConfig(format!("{}: {:?}", unit.id.clone(), err.to_string()))
         })?;
 
-        Ok (
-            DiskConfigEntry {
-                path: config_path.to_path_buf(),
-                config,
-            })
+        fs::write(&path, content)
+            .await
+            .map_err(|err| DiskError::SerializationFailed(path, err.to_string()))?;
+
+        debug!("saved storage unit '{}'", unit.id);
+        Ok(())
     }
 
-    async fn create(&self, entry: &DiskConfigEntry) -> Result<(), DiskError> {
-        let config = &entry.config; 
-        config.validate()?;
+    pub async fn create(&self, unit: &StorageUnit) -> Result<(), DiskError> {
+        info!("creating storage unit '{}'", unit.id);
 
-        let config_path = self.base_dir.join(&config.name).with_extension("yaml");
-        if config_path.exists() {
-            return Err(DiskError::DiskConfigAlreadyExist(config_path));
-        }
+        unit.config.validate()?;
 
         fs::create_dir_all(&self.base_dir)
-        .await
-        .map_err(|err| DiskError::IOError(self.base_dir.clone(), err))?;
-
-        let raw_config: RawQcow2DiskConfig = RawQcow2DiskConfig::from(config.clone());
-        let content = serde_yaml::to_string(&raw_config).map_err(|err| {
-            DiskError::InvalidConfig(format!("{}: {:?}", config.name.clone(), err.to_string()))
-        })?;
-
-        fs::write(&config_path, content)
             .await
-            .map_err(|err| DiskError::SerializationFailed(config_path, err.to_string()))?;
+            .map_err(|err| DiskError::IOError(self.base_dir.clone(), err))?;
 
-        Ok(())
-    }
-
-    async fn update(&self, entry: &DiskConfigEntry) -> Result<(), DiskError> {
-        let config = &entry.config;
-        config.validate()?;
-
-        let config_path = self.base_dir.join(&config.name).with_extension("yaml");
-        if !config_path.exists() {
-            return Err(DiskError::DiskConfigDoesNotExist(config_path));
+        let path = self.path_for(&unit.id);
+        if path.exists() {
+            warn!("storage unit '{}' already exist", unit.id);
+            return Err(DiskError::DiskConfigAlreadyExist(path));
         }
 
-        let raw_config: RawQcow2DiskConfig = RawQcow2DiskConfig::from(config.clone());
-        let content = serde_yaml::to_string(&raw_config).map_err(|err| {
-            DiskError::InvalidConfig(format!("{}: {:?}", config.name.clone(), err.to_string()))
-        })?;
-
-        fs::write(&config_path, content)
-            .await
-            .map_err(|err| DiskError::SerializationFailed(config_path, err.to_string()))?;
-
-        Ok(())
+        self.save(unit).await
     }
 
-    async fn delete(&self, name: &str) -> Result<(), DiskError> {
-        let file = &self.get_config_path(name).with_extension("yaml");
+    pub async fn update(&self, unit: &StorageUnit) -> Result<(), DiskError> {
+        info!("update storage unit '{}'", unit.id);
 
-        log::debug!("file to remove {:#?}", file);
-        if !file.exists() {
-            return Err(DiskError::DiskConfigDoesNotExist(file.to_path_buf()));
+        unit.config.validate()?;
+
+        let path = self.path_for(&unit.id);
+        if !path.exists() {
+            warn!("storage unit '{}' already exist", unit.id);
+            return Err(DiskError::DiskConfigDoesNotExist(path));
         }
 
-        let _ = fs::remove_file(file)
-            .await
-            .map_err(|_| DiskError::DiskConfigRemove(file.to_path_buf()));
+        self.save(unit).await
+    }
 
+    pub async fn delete(&self, id: &str) -> Result<(), DiskError> {
+        let path = &self.path_for(id);
+
+        if !path.exists() {
+            return Err(DiskError::DiskConfigDoesNotExist(path.to_path_buf()));
+        }
+
+        fs::remove_file(path)
+            .await
+            .map_err(|_| DiskError::DiskConfigRemove(path.to_path_buf()));
+
+        info!("deleted storage unit '{}'", id);
         Ok(())
     }
 
-    async fn list(&self) -> Result<Vec<DiskConfigEntry>, DiskError> {
-        let mut configs: Vec<DiskConfigEntry> = Vec::new();
+    pub async fn list(&self) -> Result<Vec<StorageUnit>, DiskError> {
+        let mut result = Vec::new();
 
         let mut dir = fs::read_dir(&self.base_dir)
             .await
@@ -138,7 +118,7 @@ impl Config<DiskConfigEntry, DiskError> for Qcow2DiskStore {
             .map_err(|err| DiskError::IOError(self.base_dir.clone(), err))?
         {
             let path = &entry.path();
-            if path.extension().and_then(|ext| ext.to_str()) != Some("yaml") {
+            if path.extension().and_then(|ext| ext.to_str()) != Some("toml") {
                 continue;
             }
 
@@ -146,18 +126,13 @@ impl Config<DiskConfigEntry, DiskError> for Qcow2DiskStore {
                 .await
                 .map_err(|err| DiskError::IOError(path.to_path_buf(), err))?;
 
-            let raw: RawQcow2DiskConfig = serde_yaml::from_str(&content)
+            let unit: StorageUnit = toml::from_str(&content)
                 .map_err(|err| DiskError::InvalidConfig(err.to_string()))?;
 
-            let config: Qcow2DiskConfig = raw.try_into().map_err(|err| err)?;
-            
-            configs.push(DiskConfigEntry {
-                path: entry.path(),
-                config,
-            });
+            result.push(unit);
         }
 
-        Ok(configs)
+        info!("listed {} storage units", result.len());
+        Ok(result)
     }
-
 }

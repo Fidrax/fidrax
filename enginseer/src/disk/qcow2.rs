@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use tokio::{fs, process::Command};
 
-use crate::disk::{configs::Qcow2DiskAllocationMode, errors::DiskError};
+use crate::disk::{configs::storage::Qcow2AllocationMode, errors::DiskError};
 
 #[derive(Debug)]
 pub struct Qcow2Disk {
@@ -19,7 +19,7 @@ impl Qcow2Disk {
 
     pub async fn create_disk(
         &self,
-        alloc_mode: &Qcow2DiskAllocationMode,
+        alloc_mode: &Qcow2AllocationMode,
         size_gb: &u64,
     ) -> Result<(), DiskError> {
         if self.path().exists() {
@@ -31,13 +31,13 @@ impl Qcow2Disk {
         cmd.arg("create").arg("-f").arg("qcow2");
 
         match alloc_mode {
-            Qcow2DiskAllocationMode::Sparse => {
+            Qcow2AllocationMode::Sparse => {
                 // default is sparse
             }
-            Qcow2DiskAllocationMode::Full => {
+            Qcow2AllocationMode::Full => {
                 cmd.arg("-o").arg("preallocation=full");
             }
-            Qcow2DiskAllocationMode::Metadata => {
+            Qcow2AllocationMode::Metadata => {
                 cmd.arg("-o").arg("preallocation=metadata");
             }
         }
