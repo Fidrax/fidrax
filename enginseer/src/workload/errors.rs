@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
-use crate::disk::errors::DiskError;
+use crate::storage::errors::DiskError;
 
 #[derive(Error, Debug)]
 pub enum VMError {
@@ -21,17 +21,38 @@ pub enum VMError {
     #[error("vm config already exist {0:?}")]
     VMConfigAlreadyExist(PathBuf),
 
+    #[error("vm config does not exist {0:?}")]
+    VMConfigDoesNotExist(PathBuf),
+
+    #[error("vm config remove error {0:?}")]
+    VMConfigRemove(PathBuf),
+    
     #[error("vm disk error {0:?}")]
     DiskError(DiskError),
 
     #[error("vm run command name {0} with error {1:?}")]
     CmdError(String,#[source] std::io::Error),
 
+    #[error("vm start container fialed {0}")]
+    FailedToStartContainer(String),
+
+    #[error("vm stop container fialed {0}")]
+    FailedStopContainer(String),
+
+    #[error("vm restart container fialed {0}")]
+    FailedRestartContainer(String),
+
+    #[error("vm status container fialed {0}")]
+    FailedContainerStatus(String),
+
     #[error("vm start failed with name {0} with error {1:?}")]
     QemuStartFailed(String, Option<i32>),
 
     #[error("vm qmp client name {0} with error {1:?}")]
     QmpClient(String,#[source] std::io::Error),
+
+    #[error("runtime not found for {0}")]
+    RuntimenotFound(String)
 }
 
 #[derive(Error, Debug)]

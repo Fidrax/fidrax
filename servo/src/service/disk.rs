@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use enginseer::disk::store::Qcow2DiskStore;
-use enginseer::disk::{configs::DiskConfigEntry, manager::Qcow2DiskManager};
+use enginseer::storage::store::Qcow2DiskStore;
+use enginseer::storage::{configs::DiskConfigEntry, manager::Qcow2DiskManager};
 
 use crate::api::dtos::create_disk_req::CreateDiskRequest;
 use crate::errors::ServoErrors;

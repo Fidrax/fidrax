@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
 
-use crate::disk::errors::DiskError;
+use crate::storage::errors::DiskError;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StorageMetadata {
@@ -50,8 +50,6 @@ impl StorageCommon {
     }
 }
 
-
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Qcow2AllocationMode {
     Sparse,
@@ -92,8 +90,30 @@ pub enum VMDiskFormat {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DockerVolumeData {
-    pub driver: String,         // should be enum for "local", "overlay", ...
+    pub driver: String, // should be enum for "local", "overlay", ...
     pub mount_option: Option<Vec<String>>, // e.g "size=10G"
+}
+
+impl DockerVolumeData {
+    pub fn target(&self) -> Result<&str, DiskError> {
+        if let Some(opts) = &self.mount_option {
+            for opt in opts {
+                if let Some(t) = opt.strip_prefix("target=") {
+                    return Ok(t);
+                }
+            }
+        }
+        Err(DiskError::InvalidConfig(
+            "docker volume missing target=".to_string(),
+        ))
+    }
+
+    pub fn readonly(&self) -> bool {
+        self.mount_option
+            .as_ref()
+            .map(|opts| opts.iter().any(|o| o == "ro"))
+            .unwrap_or(false)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -117,8 +137,26 @@ pub enum StorageConfig {
 impl StorageConfig {
     pub fn validate(&self) -> Result<(), DiskError> {
         match self {
-            Self::VMDisk { common, data } => {common.validate()},
-            Self::DockerVolume { common, data } => {common.validate()}
+            Self::VMDisk { common, .. } => common.validate(),
+            Self::DockerVolume { common, .. } => common.validate(),
+        }
+    }
+
+    pub fn as_vm(&self) -> Result<(&StorageCommon, &VMDiskData), DiskError> {
+        match self {
+            StorageConfig::VMDisk { common, data } => Ok((common, data)),
+            _ => Err(DiskError::InvalidConfig(
+                "storage config is not for vm".to_string(),
+            )),
+        }
+    }
+
+    pub fn as_docker(&self) -> Result<(&StorageCommon, &DockerVolumeData), DiskError> {
+        match self {
+            StorageConfig::DockerVolume { common, data } => Ok((common, data)),
+            _ => Err(DiskError::InvalidConfig(
+                "storage config is not for docker".to_string(),
+            )),
         }
     }
 }
@@ -128,7 +166,6 @@ pub struct StorageUnit {
     pub id: String, // stable id for snapshot/reference
     pub config: StorageConfig,
 }
-
 
 // tests
 #[cfg(test)]

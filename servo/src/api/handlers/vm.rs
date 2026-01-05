@@ -95,11 +95,11 @@ pub async fn status_vm(name: web::Path<String>, svc: web::Data<QemuVMService>) -
     match svc.status(&name.into_inner()).await {
         Ok(vm_state) => {
             let state = match vm_state {
-                enginseer::vm::backend::qemu::state::VMState::Stopped => "stopped",
-                enginseer::vm::backend::qemu::state::VMState::Running => "running",
-                enginseer::vm::backend::qemu::state::VMState::Paused => "paused",
-                enginseer::vm::backend::qemu::state::VMState::Error => "error",
-                enginseer::vm::backend::qemu::state::VMState::Unknown => "unknown",
+                enginseer::workload::backend::qemu::state::VMState::Stopped => "stopped",
+                enginseer::workload::backend::qemu::state::VMState::Running => "running",
+                enginseer::workload::backend::qemu::state::VMState::Paused => "paused",
+                enginseer::workload::backend::qemu::state::VMState::Error => "error",
+                enginseer::workload::backend::qemu::state::VMState::Unknown => "unknown",
             };
 
             HttpResponse::Ok().json(state)

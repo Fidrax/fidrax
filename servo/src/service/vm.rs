@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use enginseer::vm::{
-    backend::qemu::{manager::QemuManager, state::VMState},
+use enginseer::workload::{
+    backend::qemu::{runtime::QemuManager, state::VMState},
     configs::QemuConfig,
 };
 

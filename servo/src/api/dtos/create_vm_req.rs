@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use chrono::Utc;
-use enginseer::vm::configs::QemuConfig;
+use enginseer::workload::configs::QemuConfig;
 use regex::Regex;
 use serde::Deserialize;
 use utoipa::ToSchema;

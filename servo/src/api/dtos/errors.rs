@@ -1,4 +1,4 @@
-use enginseer::disk::errors::DiskError;
+use enginseer::storage::errors::DiskError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]

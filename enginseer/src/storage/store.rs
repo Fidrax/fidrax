@@ -2,7 +2,7 @@ use log::{debug, info, warn};
 use std::path::PathBuf;
 use tokio::fs::{self};
 
-use crate::disk::{configs::storage::StorageUnit, errors::DiskError};
+use crate::storage::{configs::storage::StorageUnit, errors::DiskError};
 
 #[derive(Debug, Clone)]
 pub struct StorageStore {
@@ -10,7 +10,8 @@ pub struct StorageStore {
 }
 
 impl StorageStore {
-    pub fn new(base_dir: PathBuf) -> Self {
+    pub fn new(root: PathBuf) -> Self {
+        let base_dir = root.join("storage");
         info!("initializing StorageStore at {:?}", base_dir);
         Self { base_dir }
     }
@@ -99,7 +100,7 @@ impl StorageStore {
 
         fs::remove_file(path)
             .await
-            .map_err(|_| DiskError::DiskConfigRemove(path.to_path_buf()));
+            .map_err(|_| DiskError::DiskConfigRemove(path.to_path_buf()))?;
 
         info!("deleted storage unit '{}'", id);
         Ok(())

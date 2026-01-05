@@ -1,4 +1,4 @@
-use enginseer::disk::configs::{Qcow2DiskAllocationMode, DiskConfigEntry};
+use enginseer::storage::configs::{Qcow2DiskAllocationMode, DiskConfigEntry};
 use serde::Serialize;
 use utoipa::ToSchema;
 

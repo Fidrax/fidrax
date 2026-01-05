@@ -1,4 +1,4 @@
-use crate::vm::errors::VMError;
+use crate::workload::errors::VMError;
 
 pub trait VirtualMachine<T> {
     async fn start(&self, config: T) -> Result <(), VMError>;

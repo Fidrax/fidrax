@@ -1,4 +1,4 @@
-use enginseer::vm::configs::{QemuConfig};
+use enginseer::workload::configs::{QemuConfig};
 use serde::Serialize;
 use utoipa::ToSchema;
 

@@ -1,6 +1,6 @@
 use log::{debug, info};
 
-use crate::disk::{
+use crate::storage::{
     configs::storage::{StorageConfig, StorageUnit, VMDiskFormat},
     docker_volume::DockerVolume,
     errors::DiskError,
@@ -87,7 +87,7 @@ impl StorageManager {
                     _ => Ok(()), // future formats
                 }
             }
-            StorageConfig::DockerVolume { common, data } => {
+            StorageConfig::DockerVolume { common, .. } => {
                 debug!("storage '{}' is a docker volume", unit.id);
                 // require implementation
                 let volume = DockerVolume::new(&common.name);
@@ -108,7 +108,7 @@ impl StorageManager {
                     Ok(())
                 }
             }
-            StorageConfig::DockerVolume { common, data } => {
+            StorageConfig::DockerVolume { .. } => {
                 debug!("storage '{}' is a docker volume", unit.id);
                 // require implementation
                 info!("docker volume update is not implemented yet!!");

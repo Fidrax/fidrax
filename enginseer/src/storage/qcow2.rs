@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use tokio::{fs, process::Command};
 
-use crate::disk::{configs::storage::Qcow2AllocationMode, errors::DiskError};
+use crate::storage::{configs::storage::Qcow2AllocationMode, errors::DiskError};
 
 #[derive(Debug)]
 pub struct Qcow2Disk {

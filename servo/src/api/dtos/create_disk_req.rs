@@ -1,5 +1,5 @@
 use chrono::Utc;
-use enginseer::disk::configs::{Qcow2DiskAllocationMode, Qcow2DiskConfig, DiskConfigEntry};
+use enginseer::storage::configs::{Qcow2DiskAllocationMode, Qcow2DiskConfig, DiskConfigEntry};
 use regex::Regex;
 use serde::Deserialize;
 use utoipa::ToSchema;

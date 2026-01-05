@@ -1,6 +1,6 @@
-use crate::{disk, vm::errors::VMError};
+use crate::{storage, workload::errors::VMError};
 
-use disk::errors::DiskError;
+use storage::errors::DiskError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]

@@ -1,10 +1,8 @@
-use std::os::linux::raw::stat;
-
-use tokio::{fs, process::Command};
+use tokio::process::Command;
 
 use log::{debug, info, warn};
 
-use crate::disk::errors::DiskError;
+use crate::storage::errors::DiskError;
 
 #[derive(Debug)]
 pub struct DockerVolume {
@@ -20,7 +18,11 @@ impl DockerVolume {
         &self.name
     }
 
-    pub async fn create(&self, driver: &str, options: &Option<Vec<String>>) -> Result<(), DiskError> {
+    pub async fn create(
+        &self,
+        driver: &str,
+        options: &Option<Vec<String>>,
+    ) -> Result<(), DiskError> {
         info!("creating docker volume '{}'", self.name());
 
         let mut cmd = Command::new("docker");

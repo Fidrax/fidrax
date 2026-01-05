@@ -1,7 +1,8 @@
 pub mod traits;
-pub mod disk;
+pub mod storage;
 pub mod errors;
-pub mod vm;
+pub mod workload;
+pub mod runtime;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right

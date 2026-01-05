@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::vm::backend::qemu::qmp::cmd::{commands::QmpCmdName, empty::EmptyResponse, traits::QmpCmdRequest};
+use crate::workload::backend::qemu::qmp::cmd::{commands::QmpCmdName, empty::EmptyResponse, traits::QmpCmdRequest};
 
 
 #[derive(Debug, Serialize)]
