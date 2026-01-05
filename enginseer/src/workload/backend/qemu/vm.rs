@@ -4,6 +4,7 @@ use log::info;
 use tokio::process::Command;
 
 use crate::{
+    network::configs::storage::NetworkUnit,
     runtime::state::RuntimeState,
     storage::configs::storage::StorageUnit,
     workload::{
@@ -47,6 +48,7 @@ impl QemuVM {
         &self,
         unit: &WorkloadUnit,
         storages: &[StorageUnit],
+        networks: &[NetworkUnit],
     ) -> Result<(), VMError> {
         let (vm_common, ..) = unit.config.as_vm()?;
         let mut disk_args = Vec::new();
@@ -81,6 +83,28 @@ impl QemuVM {
                 // disk
                 .arg("-drive")
                 .arg(disk);
+        }
+
+        // network
+        for (idx, net) in networks.iter().enumerate() {
+            let net = net.as_vm().map_err(|err| {
+                VMError::InvalidConfig(format!("invalid vm network '{}': {}", unit.id, err))
+            })?;
+
+            let net_id = format!("net{}", idx);
+
+            cmd.arg("-netdev").arg(format!(
+                "tap,id={},ifname={},script=no,downscript=no",
+                net_id, net.tap_name
+            ));
+
+            let mut dev = format!("virito-net-pci,netdev={}", net_id);
+
+            if let Some(mac) = &net.mac {
+                dev.push_str(&format!(",mac={}", mac));
+            }
+
+            cmd.arg("-device").arg(dev);
         }
 
         cmd

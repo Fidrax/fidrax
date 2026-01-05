@@ -1,4 +1,8 @@
 use crate::{
+    network::{
+        configs::storage::NetworkUnit,
+        docker::{DockerNetwork, docker_network_from_config},
+    },
     runtime::state::RuntimeState,
     storage::configs::storage::StorageUnit,
     workload::{configs::storage::WorkloadUnit, errors::VMError},
@@ -20,12 +24,28 @@ impl DockerEngine {
         &self,
         unit: &WorkloadUnit,
         storages: &[StorageUnit],
+        networks: &[NetworkUnit],
     ) -> Result<(), VMError> {
         let (.., data) = unit.config.as_docker()?;
 
+        let primary_network = networks
+            .first()
+            .map(|n| docker_network_from_config(&n.config))
+            .transpose()?
+            .unwrap_or(DockerNetwork {
+                name: "bridge".to_string(),
+            });
+
         let mut cmd = tokio::process::Command::new("docker");
 
-        cmd.arg("run").arg("-d").arg("--name").arg(&unit.id);
+        cmd.args([
+            "run",
+            "-d",
+            "--name",
+            &unit.id,
+            "--network",
+            &primary_network.name,
+        ]);
 
         if let Some(envs) = &data.env {
             for e in envs {

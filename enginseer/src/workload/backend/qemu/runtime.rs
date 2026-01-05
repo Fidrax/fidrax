@@ -1,11 +1,11 @@
-
 use log::debug;
 
+use crate::network::configs::storage::NetworkUnit;
 use crate::runtime::state::RuntimeState;
+use crate::runtime::traits::Runtime;
 use crate::storage::configs::storage::StorageUnit;
 use crate::workload::configs::storage::WorkloadUnit;
 use crate::workload::{backend::qemu::vm::QemuVM, errors::VMError};
-use crate::runtime::traits::Runtime;
 
 #[derive(Debug, Clone)]
 pub struct QemuRuntime {
@@ -13,11 +13,16 @@ pub struct QemuRuntime {
 }
 
 impl Runtime for QemuRuntime {
-    async fn start(&self, unit: &WorkloadUnit, storages: &[StorageUnit]) -> Result<(), VMError> {
+    async fn start(
+        &self,
+        unit: &WorkloadUnit,
+        storages: &[StorageUnit],
+        networks: &[NetworkUnit],
+    ) -> Result<(), VMError> {
         unit.config.validate()?;
 
         debug!("qemu runtime start");
-        self.vm.start(unit, storages).await
+        self.vm.start(unit, storages, networks).await
     }
 
     async fn stop(&self, unit: &WorkloadUnit) -> Result<(), VMError> {

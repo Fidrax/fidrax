@@ -1,11 +1,9 @@
 use log::debug;
 
 use crate::{
-    runtime::traits::Runtime,
-    storage::configs::storage::StorageUnit,
-    workload::{
+    network::configs::storage::NetworkUnit, runtime::traits::Runtime, storage::configs::storage::StorageUnit, workload::{
         backend::docker::engine::DockerEngine, configs::storage::WorkloadUnit, errors::VMError,
-    },
+    }
 };
 
 #[derive(Debug, Clone)]
@@ -20,10 +18,10 @@ impl DockerRuntime {
 }
 
 impl Runtime for DockerRuntime {
-    async fn start(&self, unit: &WorkloadUnit, storages: &[StorageUnit]) -> Result<(), VMError> {
+    async fn start(&self, unit: &WorkloadUnit, storages: &[StorageUnit], networks: &[NetworkUnit]) -> Result<(), VMError> {
         debug!("docker run time start '{}'", unit.id);
         
-        self.engine.run_container(unit, storages).await
+        self.engine.run_container(unit, storages, networks).await
     }
 
     async fn stop(&self, unit: &WorkloadUnit) -> Result<(), VMError> {
